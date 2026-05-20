@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ショベルカー検定ゲーム</title>
+  <style>
+    :root{
+      --bg:#0f172a;
+      --panel:#111827;
+      --panel2:#1f2937;
+      --accent:#f59e0b;
+      --accent2:#f97316;
+      --ok:#22c55e;
+      --bad:#ef4444;
+      --text:#f8fafc;
+      --muted:#cbd5e1;
+      --line:rgba(255,255,255,.12);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(circle at 20% 10%, rgba(245,158,11,.28), transparent 26%),
+        radial-gradient(circle at 80% 0%, rgba(249,115,22,.18), transparent 28%),
+        linear-gradient(160deg,#020617,#0f172a 45%,#111827);
+      overflow-x:hidden;
+    }
+    .wrap{max-width:980px;margin:0 auto;padding:24px 14px 44px}
+    .hero{
+      position:relative;
+      border:1px solid var(--line);
+      border-radius:28px;
+      padding:28px 20px;
+      background:linear-gradient(145deg,rgba(17,24,39,.92),rgba(31,41,55,.82));
+      box-shadow:0 24px 70px rgba(0,0,0,.35);
+      overflow:hidden;
+    }
+    .hero::after{
+      content:"";
+      position:absolute;right:-80px;top:-80px;width:260px;height:260px;
+      background:radial-gradient(circle,rgba(245,158,11,.35),transparent 64%);
+      pointer-events:none;
+    }
+    h1{margin:0;font-size:clamp(30px,6vw,58px);letter-spacing:.04em;line-height:1.05}
+    .subtitle{margin:12px 0 0;color:var(--muted);line-height:1.75;font-size:15px}
+    .machine{
+      margin-top:22px;
+      min-height:118px;
+      border-radius:24px;
+      background:linear-gradient(135deg,rgba(245,158,11,.16),rgba(15,23,42,.34));
+      border:1px solid var(--line);
+      display:flex;align-items:center;justify-content:center;
+      position:relative;
+      overflow:hidden;
+    }
+    .machine svg{width:min(540px,96%);height:auto;filter:drop-shadow(0 14px 10px rgba(0,0,0,.35))}
+    .controls{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}
+    button{
+      border:0;
+      color:var(--text);
+      cursor:pointer;
+      -webkit-tap-highlight-color:transparent;
+      touch-action:manipulation;
+      font-weight:800;
+      letter-spacing:.03em;
+    }
+    .level-btn{
+      min-height:54px;border-radius:18px;
+      background:linear-gradient(180deg,#374151,#111827);
+      border:1px solid var(--line);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.08), 0 10px 22px rgba(0,0,0,.22);
+    }
+    .level-btn.active{background:linear-gradient(180deg,var(--accent),var(--accent2));color:#111827}
+    .start{
+      width:100%;margin-top:12px;min-height:58px;border-radius:18px;
+      background:linear-gradient(90deg,#fbbf24,#f97316);
+      color:#111827;font-size:18px;box-shadow:0 14px 28px rgba(249,115,22,.22);
+    }
+    .game{margin-top:18px;display:none}
+    .status{
+      display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;
+      margin-bottom:12px;color:var(--muted);font-size:14px;
+    }
+    .bar{height:12px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden;border:1px solid var(--line)}
+    .bar span{display:block;height:100%;width:0%;background:linear-gradient(90deg,#fbbf24,#f97316);transition:.35s}
+    .card{
+      border:1px solid var(--line);border-radius:24px;padding:18px;
+      background:rgba(15,23,42,.78);box-shadow:0 18px 45px rgba(0,0,0,.28)
+    }
+    .tag{display:inline-flex;gap:8px;align-items:center;color:#111827;background:#fbbf24;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:900;margin-bottom:12px}
+    .question{font-size:clamp(18px,4vw,26px);font-weight:900;line-height:1.5;margin:0 0 14px}
+    .choices{display:grid;gap:10px}
+    .choice{
+      width:100%;text-align:left;min-height:58px;border-radius:17px;padding:13px 14px;
+      background:linear-gradient(180deg,#1f2937,#111827);
+      border:1px solid var(--line);font-size:15px;line-height:1.55;
+    }
+    .choice:hover{outline:2px solid rgba(245,158,11,.36)}
+    .choice.correct{background:linear-gradient(180deg,rgba(34,197,94,.95),rgba(21,128,61,.95));color:#052e16}
+    .choice.wrong{background:linear-gradient(180deg,rgba(239,68,68,.95),rgba(153,27,27,.95));color:#fff}
+    .choice:disabled{cursor:default;opacity:.95}
+    .explain{display:none;margin-top:14px;color:#e2e8f0;line-height:1.75;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:18px;padding:14px}
+    .next{
+      display:none;width:100%;margin-top:12px;min-height:54px;border-radius:18px;
+      background:linear-gradient(90deg,#38bdf8,#6366f1);font-size:16px;
+    }
+    .result{display:none;margin-top:18px;border:1px solid var(--line);border-radius:24px;padding:22px;background:rgba(15,23,42,.82);box-shadow:0 18px 45px rgba(0,0,0,.28)}
+    .rank{font-size:clamp(28px,7vw,56px);font-weight:1000;margin:4px 0;color:#fbbf24}
+    .small{color:var(--muted);line-height:1.75}
+    .review{margin-top:14px;display:grid;gap:8px}
+    .review div{padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid var(--line);font-size:14px;line-height:1.6}
+    .footer{margin-top:18px;color:#94a3b8;font-size:12px;line-height:1.8;text-align:center}
+    @media(max-width:720px){
+      .controls{grid-template-columns:repeat(2,1fr)}
+      .status{grid-template-columns:1fr 1fr;align-items:start}
+      .status .bar{grid-column:1/-1;order:3}
+      .hero{padding:22px 14px}
+      .wrap{padding-top:14px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>ショベルカー検定</h1>
+      <p class="subtitle">建機好き・現場経験者・重機マニア向け。油圧、足回り、アタッチメント、施工、安全、機械選定まで、少しずついやらしく難しくなる4択検定です。</p>
+      <div class="machine" aria-label="ショベルカーのイラスト">
+        <svg viewBox="0 0 720 180" role="img">
+          <rect x="110" y="128" width="360" height="28" rx="14" fill="#111827"/>
+          <g fill="#020617">
+            <circle cx="150" cy="142" r="15"/><circle cx="195" cy="142" r="15"/><circle cx="240" cy="142" r="15"/><circle cx="285" cy="142" r="15"/><circle cx="330" cy="142" r="15"/><circle cx="375" cy="142" r="15"/><circle cx="420" cy="142" r="15"/>
+          </g>
+          <path d="M210 71 L360 71 Q391 72 408 94 L433 126 L184 126 L184 102 Q184 78 210 71Z" fill="#f59e0b"/>
+          <path d="M275 75 L350 75 Q377 76 393 99 L407 121 L275 121Z" fill="#1e293b" opacity=".9"/>
+          <path d="M287 83 L344 83 Q363 84 375 101 L383 115 L287 115Z" fill="#93c5fd" opacity=".65"/>
+          <rect x="214" y="93" width="52" height="27" rx="6" fill="#fbbf24"/>
+          <circle cx="300" cy="126" r="19" fill="#78350f"/>
+          <circle cx="300" cy="126" r="9" fill="#fbbf24"/>
+          <path d="M393 78 C455 50, 500 45, 544 57" fill="none" stroke="#f59e0b" stroke-width="18" stroke-linecap="round"/>
+          <path d="M542 58 C580 70, 604 92, 620 122" fill="none" stroke="#f59e0b" stroke-width="16" stroke-linecap="round"/>
+          <path d="M616 120 L674 126 L653 158 Q623 151 604 130Z" fill="#f97316"/>
+          <path d="M612 126 L673 132" stroke="#78350f" stroke-width="5" stroke-linecap="round"/>
+          <circle cx="455" cy="54" r="10" fill="#78350f"/>
+          <circle cx="545" cy="58" r="9" fill="#78350f"/>
+        </svg>
+      </div>
+      <div class="controls">
+        <button class="level-btn active" data-level="basic">3級：基礎</button>
+        <button class="level-btn" data-level="middle">2級：実務</button>
+        <button class="level-btn" data-level="hard">1級：現場</button>
+        <button class="level-btn" data-level="oni">特級：沼</button>
+      </div>
+      <button class="start" id="startBtn">検定スタート</button>
+    </section>
+
+    <section class="game" id="game">
+      <div class="status">
+        <div class="bar"><span id="bar"></span></div>
+        <div id="count">1 / 10</div>
+        <div id="score">正解 0</div>
+      </div>
+      <div class="card">
+        <div class="tag" id="tag">3級：基礎</div>
+        <p class="question" id="question"></p>
+        <div class="choices" id="choices"></div>
+        <div class="explain" id="explain"></div>
+        <button class="next" id="nextBtn">次の問題へ</button>
+      </div>
+    </section>
+
+    <section class="result" id="result">
+      <div class="small">検定結果</div>
+      <div class="rank" id="rank"></div>
+      <p class="small" id="resultText"></p>
+      <div class="review" id="review"></div>
+      <button class="start" id="retryBtn">もう一度挑戦する</button>
+    </section>
+    <div class="footer">※このゲームは学習用です。実際の操作・点検・作業判断は、機種ごとの取扱説明書、社内ルール、資格、安全基準に従ってください。</div>
+  </div>
+
+<script>
+const bank = {
+  basic: {
+    label: "3級：基礎",
+    questions: [
+      {q:"一般に『ショベルカー』と呼ばれる建機の、より正式寄りな呼び方として近いものはどれ？", a:1, c:["タイヤローダー","油圧ショベル","ブルドーザー","ラフテレーンクレーン"], e:"日本では油圧ショベル、バックホー、ユンボなど複数の呼び方があります。『ユンボ』はもともと商品名由来の呼称として知られます。"},
+      {q:"油圧ショベルで、地面を掘る先端の部品を一般に何と呼ぶ？", a:2, c:["ブーム","アーム","バケット","シュー"], e:"土をすくう部分がバケットです。ブームとアームはバケットを支える腕のような構造です。"},
+      {q:"クローラ式ショベルの『クローラ』が指すものはどれ？", a:0, c:["無限軌道の足回り","旋回体のカバー","運転席の保護枠","バケットの爪"], e:"クローラは履帯、いわゆるキャタピラのことです。軟弱地や不整地で接地圧を下げやすい特徴があります。"},
+      {q:"ショベルカーの上部がぐるっと回る動作を何という？", a:3, c:["走行","掘削","排土","旋回"], e:"上部旋回体が回る動作を旋回と呼びます。周囲確認が特に重要な動作です。"},
+      {q:"標準的な掘削作業で、土を手前へ引き寄せて掘るタイプの作業に向くのは？", a:1, c:["フォークリフト","バックホー作業","ロードローラー作業","高所作業車作業"], e:"バックホーは手前に引き寄せる掘削に向く代表的な使い方です。"},
+      {q:"バケット先端についている交換可能な爪状部品は？", a:2, c:["リンク","ピン","ツース","スプロケット"], e:"バケット先端の爪はツースと呼ばれます。摩耗すると掘削効率や燃費にも影響します。"},
+      {q:"油圧ショベルの基本動作として最も関係が薄いものはどれ？", a:3, c:["ブーム上げ下げ","アーム押し引き","バケット巻き込み","翼による揚力発生"], e:"油圧ショベルは油圧シリンダや油圧モータで動きます。翼の揚力は航空機寄りの話です。"},
+      {q:"小型ショベルで住宅地や狭い現場に入りやすい特徴として近いものは？", a:0, c:["小旋回・後方小旋回などの設計","必ず時速100kmで走れる","必ずクレーン車より吊れる","舗装道路を削らず全速走行できる"], e:"狭い現場では後端のはみ出しが少ない後方小旋回などが有利です。"},
+      {q:"作業開始前に行うべき行動として最も正しいものは？", a:2, c:["燃料だけ見れば十分","周囲確認は作業後でよい","日常点検と周囲確認を行う","エンジン音が大きければ安全"], e:"油・水・漏れ・足回り・警報・周囲の人や障害物確認など、作業前点検が重要です。"},
+      {q:"ショベルカーの運転席周囲にある保護構造の目的として近いものは？", a:1, c:["燃費を必ず半分にする","転倒・落下物などからオペレータを守る","土の色を自動で判定する","旋回速度を無制限に上げる"], e:"ROPS/FOPSなど、転倒時や落下物から運転者を保護する考え方があります。"}
+    ]
+  },
+  middle: {
+    label: "2級：実務",
+    questions: [
+      {q:"油圧ショベルで『作動油温が低い』時の扱いとして最も現実的なのは？", a:2, c:["すぐ最大負荷で掘る","エンジンを切ったまま操作する","暖機し、動作をなじませてから負荷を上げる","バケットを外せば油温は関係ない"], e:"作動油が冷えて粘度が高いと応答や負荷に影響します。暖機と低負荷動作が基本です。"},
+      {q:"バケット容量を大きくしすぎた時に起こりやすい問題は？", a:0, c:["掘削抵抗や機体負荷が増え、バランスも悪化しやすい","必ず燃費が良くなる","旋回半径が必ず小さくなる","油圧ホースが不要になる"], e:"大きいバケットは作業量が増える一方、土質や比重によって過負荷、転倒リスク、作業速度低下につながります。"},
+      {q:"泥濘地でクローラショベルがタイヤ式より有利になりやすい主因は？", a:1, c:["車輪が丸いから","接地面積が広く、接地圧を下げやすいから","必ず軽油を使わないから","バケットが透明だから"], e:"クローラは広い面で荷重を受けるため、軟弱地で沈み込みを抑えやすいです。"},
+      {q:"油圧ショベルの『ブーム』『アーム』『バケット』の並びとして自然なのは？", a:3, c:["車体→バケット→ブーム→アーム","車体→アーム→バケット→ブーム","車体→ツース→アーム→ブーム","車体→ブーム→アーム→バケット"], e:"車体側からブーム、アーム、バケットの順です。リンク機構でバケット角度を変えます。"},
+      {q:"法面作業で最も注意すべき考え方に近いものは？", a:0, c:["機体の安定、足場、旋回方向、重心変化を常に意識する","上り坂なら転倒しない","バケットを満杯にすれば常に安定する","クローラ式なら傾斜角は無制限"], e:"斜面では重心、地盤、旋回、荷の位置で安定性が大きく変わります。"},
+      {q:"アタッチメントとして『ブレーカ』を使う主な目的は？", a:2, c:["砂利をふるい分ける","水を吸い上げる","コンクリートや岩を破砕する","舗装を美しく転圧する"], e:"油圧ブレーカは打撃で破砕するアタッチメントです。配管仕様や機体サイズとの適合が重要です。"},
+      {q:"作業半径が大きい状態で重い物を扱う時、一般にどうなる？", a:1, c:["必ず安定する","転倒モーメントが大きくなり不安定になりやすい","油圧がゼロになる","クローラが消耗しなくなる"], e:"荷が遠くなるほどモーメントが大きくなります。吊り作業や重作業では作業範囲図・定格を守る必要があります。"},
+      {q:"油圧ホースの劣化・損傷を放置すると危険な理由として正しいものは？", a:3, c:["外観に関係なく永久に使える","低圧なので破裂しない","油は水なので安全","高圧油の漏れや破裂で重大事故につながる"], e:"油圧回路は高圧です。ピンホール漏れでも危険で、皮膚への高圧注入事故にも注意が必要です。"},
+      {q:"狭い現場で後方小旋回機が選ばれやすい理由は？", a:0, c:["旋回時の後端はみ出しを抑えやすい","バケット容量が必ず最大になる","燃料が不要になる","必ず無免許で使える"], e:"壁際や道路工事などでは、後端の張り出しが少ない機体が扱いやすく安全面でも有利です。"},
+      {q:"掘削した土をトラックに積み込む時、作業効率に影響しにくいものは？", a:2, c:["旋回角度","ダンプの位置","運転席の飲み物の銘柄","バケット容量と土質"], e:"旋回角度を小さくし、ダンプ配置や掘削姿勢を整えるとサイクルタイムを短縮しやすいです。"}
+    ]
+  },
+  hard: {
+    label: "1級：現場",
+    questions: [
+      {q:"『後方超小旋回』の利点を説明する選択肢として最も近いものは？", a:1, c:["通常機より必ず掘削力が大きい","上部旋回体の後端はみ出しが非常に少なく、狭所で使いやすい","クローラが存在しない","ブームが横にしか動かない"], e:"後方超小旋回は狭い道路や建物際で有利です。ただし安定性や整備性、作業姿勢には機種ごとの特性があります。"},
+      {q:"ロングアーム仕様を選ぶ時の注意として最も重要なのは？", a:3, c:["掘削半径が伸びるほど常に掘削力も増える","短いアームより必ず安定する","バケットは何を付けてもよい","作業範囲は広がるが、先端力・安定性・適合バケットに制約が出やすい"], e:"ロングアームは届く範囲が広い反面、モーメントが増え、重作業や大容量バケットには不向きな場合があります。"},
+      {q:"旋回しながらブームを上げ、同時にアームを引く複合操作で起こりうることは？", a:0, c:["油圧流量配分や負荷により各動作速度が変わる","全動作が必ず単独操作より速くなる","安全確認が不要になる","油圧ポンプが停止する"], e:"複合操作ではポンプ流量、制御弁、負荷圧、エンジン回転などの影響で動作の優先感や速度が変わります。"},
+      {q:"クローラの張りが不適切な場合に起こりやすい不具合は？", a:2, c:["燃料タンクが大きくなる","運転席が広くなる","脱輪・異常摩耗・走行抵抗増加など","バケット容量が自動補正される"], e:"張り過ぎも緩過ぎも問題です。現場の土砂詰まりや摩耗状態も含めて管理します。"},
+      {q:"『接地圧』の説明として近いものは？", a:1, c:["排気ガスの温度","機体重量を地面に伝える面積あたりの圧力","バケット先端の色","油圧ポンプの型番"], e:"接地圧が低いほど軟弱地で沈みにくくなります。ただし作業姿勢や土質によって挙動は変わります。"},
+      {q:"解体用の高所作業仕様機で特に重要な設計・運用要素は？", a:3, c:["必ず標準機と同じ重心で使う","先端が長いほど安全確認は簡単になる","カウンタウェイトは不要","到達高さ、先端アタッチメント重量、安定性、作業範囲管理"], e:"高所解体では重心と作業半径、アタッチメント重量、倒壊物、足場条件の管理が非常に重要です。"},
+      {q:"ミニショベルで『可変脚』や『可変幅クローラ』が採用される狙いに近いものは？", a:0, c:["狭い通路では縮め、作業時は広げて安定性を得る","必ず最高速度を上げる","油圧を使わず全て手動にする","バケットを自動で洗浄する"], e:"搬入時は狭く、作業時は広くすることで取り回しと安定性を両立しやすくなります。"},
+      {q:"吊り荷作業を油圧ショベルで行う場合、最も危険な考え方はどれ？", a:2, c:["定格荷重を確認する","専用フックや合図者を確認する","少しなら作業半径図を無視してよい","地盤と機体姿勢を確認する"], e:"油圧ショベルでの吊り作業は条件と法令・社内規定の確認が重要です。作業半径と定格を無視するのは非常に危険です。"},
+      {q:"アタッチメント交換時にピン周辺で特に注意すべきことは？", a:1, c:["手を挟まれる危険はない","ピン穴合わせ時の挟まれ、落下、残圧、合図不一致","エンジン全開なら安全","グリスは絶対に不要"], e:"アタッチメント交換では挟まれ事故が起きやすいです。残圧抜き、支持、合図、立ち位置が重要です。"},
+      {q:"燃費と作業量を両立する運転として近いものは？", a:3, c:["常にフルスロットルで急操作","空荷でも最大旋回を続ける","掘削抵抗を無視して深く刺す","適正回転、浅めの切削、短い旋回角、無駄な待機低減"], e:"作業サイクルを整え、無駄な旋回や過負荷を避けると燃費・速度・機械負担のバランスが良くなります。"}
+    ]
+  },
+  oni: {
+    label: "特級：沼",
+    questions: [
+      {q:"油圧ショベルの可変容量ポンプ制御で、負荷に応じて流量を調整する狙いに最も近いものは？", a:0, c:["必要な動作速度と燃費・エンジン負荷のバランスを取る","常に最大吐出で発熱を増やす","全シリンダを同じ長さにする","作動油を燃料として燃やす"], e:"可変容量ポンプやロードセンシング的な考え方は、必要な流量・圧力を効率よく供給するためのものです。"},
+      {q:"同じ機体で硬い地盤を掘る時、大容量バケットより小さめバケットが有利になる場合がある理由は？", a:2, c:["小さいほど必ず積込回数がゼロになる","色が目立つから","切削抵抗を抑え、貫入力や機体負荷のバランスを取りやすいから","クローラが浮くから"], e:"土質が硬い場合、大きすぎるバケットは刺さらず効率が落ちることがあります。土質に対する容量選定が重要です。"},
+      {q:"『オフセットブーム』仕様の主な狙いは？", a:1, c:["必ず真上だけ掘る","機体中心から左右に掘削位置をずらし、壁際や側溝作業をしやすくする","走行モータを取り外す","旋回を禁止する"], e:"オフセットブームは狭所や壁際の掘削に強みがあります。都市土木や配管まわりで便利です。"},
+      {q:"エンジン回転を上げても作業速度が思ったほど上がらない場面の説明としてあり得るものは？", a:3, c:["油圧ショベルには油圧が存在しない","バケットが黄色だから","クローラ幅だけで速度が決まる","油圧流量上限、リリーフ、負荷圧、制御特性などが支配している"], e:"エンジン回転だけではなく、ポンプ容量、回路圧、負荷、制御弁、リリーフ状態が動作速度を左右します。"},
+      {q:"バケットを手前に巻き込みすぎ、土を抱えたまま高い位置で大きく旋回する操作のリスクとして近いものは？", a:0, c:["重心が高くなり、旋回慣性や転倒リスクが増える","必ず油圧が冷える","騒音がゼロになる","ツースが新品になる"], e:"荷を高く遠くに持つほど不安定です。低く抱え、必要最小限の旋回で作業する意識が安全につながります。"},
+      {q:"油圧ブレーカ使用時に通常掘削より気を使うべき点として最も適切なのは？", a:2, c:["潤滑や押し付けは全く不要","空打ちは機械に優しい","機体・配管・作動油温・チゼル・空打ち防止を意識する","バケットツースで代用できる"], e:"ブレーカは衝撃と熱、配管負荷が大きい作業です。連続打撃、空打ち、押し付け不足、給脂不足に注意します。"},
+      {q:"チルトローテータのような高機能アタッチメントを導入する時の見方として適切なのは？", a:1, c:["便利なので機体能力や重量は無視できる","作業自由度は増えるが、重量・高さ・油圧配管・操作習熟も考慮する","どの機体にも無改造で必ず付く","掘削力が必ず10倍になる"], e:"高機能アタッチメントは作業効率を上げる一方で、先端重量や回路、操作体系、保守も含めて評価が必要です。"},
+      {q:"軟弱地で鉄板を敷く判断の説明として最も正しいものは？", a:3, c:["鉄板は見た目だけの飾り","クローラなら絶対不要","重機の重量が消える","接地条件を改善し、沈下・転倒・路面損傷を抑えるため"], e:"敷鉄板は荷重分散や走行路確保に有効です。ただし鉄板のずれ、段差、端部沈下にも注意します。"},
+      {q:"油圧ショベルの作業で『機械の能力不足』と『作業方法の悪さ』を切り分ける視点として最も良いものは？", a:0, c:["土質、バケット容量、作業半径、サイクルタイム、油温、操作姿勢を分けて見る","音が大きいかだけで判断する","黄色い機体なら全て能力不足ではない","オペレータの勘だけで決める"], e:"現場では機械仕様・土質・姿勢・アタッチメント・操作方法を切り分けると、改善点が見つかりやすくなります。"},
+      {q:"特級問題：標準機より後方小旋回機の方が常に全性能で上、という考え方は？", a:2, c:["完全に正しい","燃費だけは必ず10倍良い","誤り。狭所性は高いが、安定性・整備性・作業範囲などは機種ごとに評価が必要","法律で標準機は禁止"], e:"後方小旋回機は強力な選択肢ですが、万能ではありません。用途、現場幅、作業半径、掘削力、整備性、価格で総合判断します。"}
+    ]
+  }
+};
+
+let level = 'basic';
+let qs = [];
+let index = 0;
+let score = 0;
+let answered = false;
+let log = [];
+
+const $ = (id)=>document.getElementById(id);
+const startBtn = $('startBtn');
+const nextBtn = $('nextBtn');
+const retryBtn = $('retryBtn');
+
+document.querySelectorAll('.level-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.level-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    level = btn.dataset.level;
+  });
+});
+
+function shuffle(arr){
+  return [...arr].sort(()=>Math.random()-0.5);
+}
+
+function start(){
+  qs = shuffle(bank[level].questions).slice(0,10);
+  index = 0; score = 0; log = []; answered = false;
+  $('game').style.display = 'block';
+  $('result').style.display = 'none';
+  startBtn.textContent = '検定をリセットして再スタート';
+  render();
+  window.scrollTo({top:$('game').offsetTop-10, behavior:'smooth'});
+}
+
+function render(){
+  const item = qs[index];
+  answered = false;
+  $('tag').textContent = bank[level].label;
+  $('question').textContent = item.q;
+  $('count').textContent = `${index+1} / ${qs.length}`;
+  $('score').textContent = `正解 ${score}`;
+  $('bar').style.width = `${(index/qs.length)*100}%`;
+  $('explain').style.display = 'none';
+  $('explain').textContent = '';
+  nextBtn.style.display = 'none';
+  const choices = $('choices');
+  choices.innerHTML = '';
+  item.c.forEach((txt,i)=>{
+    const b = document.createElement('button');
+    b.className = 'choice';
+    b.innerHTML = `<b>${['A','B','C','D'][i]}.</b> ${txt}`;
+    b.addEventListener('click',()=>answer(i));
+    choices.appendChild(b);
+  });
+}
+
+function answer(i){
+  if(answered) return;
+  answered = true;
+  const item = qs[index];
+  const buttons = [...document.querySelectorAll('.choice')];
+  buttons.forEach((b,idx)=>{
+    b.disabled = true;
+    if(idx === item.a) b.classList.add('correct');
+    if(idx === i && idx !== item.a) b.classList.add('wrong');
+  });
+  const ok = i === item.a;
+  if(ok) score++;
+  log.push({q:item.q, ok, correct:item.c[item.a], selected:item.c[i]});
+  $('score').textContent = `正解 ${score}`;
+  $('explain').style.display = 'block';
+  $('explain').innerHTML = `${ok ? '✅ 正解！' : '❌ 不正解…'}<br>${item.e}`;
+  nextBtn.style.display = 'block';
+}
+
+function next(){
+  index++;
+  if(index >= qs.length){ finish(); }
+  else render();
+}
+
+function finish(){
+  $('game').style.display = 'none';
+  $('result').style.display = 'block';
+  $('bar').style.width = '100%';
+  const pct = Math.round(score / qs.length * 100);
+  let rank = '';
+  let text = '';
+  if(pct === 100){ rank = '神オペ級'; text = 'これはすごいです。現場・機械・安全の見方がかなり深いです。'; }
+  else if(pct >= 80){ rank = 'ベテラン級'; text = 'かなり強いです。細かい選定や作業姿勢まで見えています。'; }
+  else if(pct >= 60){ rank = '現場見習い上級'; text = '基礎はしっかりあります。油圧・安定性・アタッチメント周りを詰めると伸びます。'; }
+  else if(pct >= 40){ rank = '建機好き入門'; text = 'ショベルカーの世界に入り始めています。部品名と安全の考え方を押さえると一気に強くなります。'; }
+  else { rank = 'まずは始業点検から'; text = 'ここからです。部品名、動き、危険ポイントを覚えると一気に面白くなります。'; }
+  $('rank').textContent = `${rank}｜${score}/${qs.length}問 正解`;
+  $('resultText').textContent = text;
+  const review = $('review');
+  review.innerHTML = '';
+  log.forEach((r,n)=>{
+    const div = document.createElement('div');
+    div.innerHTML = `${r.ok?'✅':'❌'} <b>Q${n+1}</b> ${r.q}<br><span style="color:#cbd5e1">正解：${r.correct}</span>`;
+    review.appendChild(div);
+  });
+  window.scrollTo({top:$('result').offsetTop-10, behavior:'smooth'});
+}
+
+startBtn.addEventListener('click',start);
+nextBtn.addEventListener('click',next);
+retryBtn.addEventListener('click',start);
+</script>
+</body>
+</html>
